@@ -5,19 +5,17 @@ import cors from 'cors';
 import { CreditOracle, batchUpdateScores } from './oracle';
 import { API, validateConfig } from './config';
 
-// Initialize Express app
+
 const app = express();
 
-// Middleware
+
 app.use(cors({ origin: API.corsOrigin }));
 app.use(express.json());
 
-// Initialize Oracle (will be set after validation)
+
 let oracle: CreditOracle | null = null;
 
-/**
- * Health check endpoint
- */
+
 app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
@@ -27,9 +25,7 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-/**
- * Get oracle status and balance
- */
+
 app.get('/api/oracle/status', async (req: Request, res: Response) => {
   try {
     if (!oracle) {
@@ -50,10 +46,7 @@ app.get('/api/oracle/status', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Calculate and update credit score for a specific address
- * POST /api/score/:address
- */
+
 app.post('/api/score/:address', async (req: Request, res: Response) => {
   try {
     if (!oracle) {
@@ -64,13 +57,11 @@ app.post('/api/score/:address', async (req: Request, res: Response) => {
 
     console.log(`\n📨 Received score update request for: ${address}`);
 
-    // Check if score already exists (optional check)
     const exists = await oracle.hasScore(address);
     if (exists) {
       console.log('⚠️  Score already exists - will update anyway');
     }
 
-    // Update score
     const result = await oracle.updateCreditScore(address);
 
     res.json({
@@ -92,10 +83,7 @@ app.post('/api/score/:address', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Check if an address has a score
- * GET /api/score/:address/exists
- */
+
 app.get('/api/score/:address/exists', async (req: Request, res: Response) => {
   try {
     if (!oracle) {
@@ -117,11 +105,7 @@ app.get('/api/score/:address/exists', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Batch update multiple addresses
- * POST /api/score/batch
- * Body: { addresses: string[] }
- */
+
 app.post('/api/score/batch', async (req: Request, res: Response) => {
   try {
     if (!oracle) {
@@ -140,7 +124,7 @@ app.post('/api/score/batch', async (req: Request, res: Response) => {
 
     console.log(`\n📦 Batch update requested for ${addresses.length} addresses`);
 
-    // Start batch update (don't await - runs in background)
+
     batchUpdateScores(oracle, addresses).catch(err => {
       console.error('Batch update error:', err);
     });
@@ -158,11 +142,7 @@ app.post('/api/score/batch', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * Manual trigger endpoint (for testing)
- * POST /api/trigger
- * Body: { address: string }
- */
+
 app.post('/api/trigger', async (req: Request, res: Response) => {
   try {
     if (!oracle) {
@@ -189,9 +169,7 @@ app.post('/api/trigger', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * 404 handler
- */
+
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     error: 'Not found',
@@ -200,28 +178,24 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-/**
- * Start the server
- */
+
 async function startServer() {
   try {
     console.log('\n🚀 Starting Private Credit Oracle Server...\n');
 
-    // Validate configuration
+
     validateConfig();
 
-    // Initialize oracle
     console.log('\n🤖 Initializing Credit Oracle...');
     oracle = new CreditOracle();
 
-    // Verify oracle authorization
+
     const isAuthorized = await oracle.verifyOracleAuthorization();
     if (!isAuthorized) {
       console.warn('\n⚠️  WARNING: Oracle not authorized in contract!');
       console.warn('   Deploy contracts with this oracle address or update contract.\n');
     }
 
-    // Check oracle balance
     const balance = await oracle.getOracleBalance();
     console.log(`💰 Oracle balance: ${balance} ETH`);
     
@@ -229,7 +203,7 @@ async function startServer() {
       console.warn('⚠️  WARNING: Low oracle balance! Fund with testnet ETH.\n');
     }
 
-    // Start Express server
+
     app.listen(API.port, () => {
       console.log('\n✅ Server running!');
       console.log(`📡 Listening on: http://localhost:${API.port}`);
@@ -250,7 +224,7 @@ async function startServer() {
   }
 }
 
-// Handle graceful shutdown
+
 process.on('SIGINT', () => {
   console.log('\n\n👋 Shutting down gracefully...');
   process.exit(0);
@@ -261,5 +235,5 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-// Start the server
+
 startServer();
